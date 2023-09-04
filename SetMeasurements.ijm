@@ -1,0 +1,83 @@
+// Prompt user for measurements
+Dialog.create("Select Measurements");
+	Dialog.addCheckbox("Area", true);
+	Dialog.addCheckbox("Mean Gray Value", false);
+	Dialog.addCheckbox("Standard Deviation", false);
+	Dialog.addCheckbox("Modal Value", false);
+	Dialog.addCheckbox("Minimum & Maximum Gray Value", false);
+	Dialog.addCheckbox("Centroid", false);
+	Dialog.addCheckbox("Center of Mass", false);
+	Dialog.addCheckbox("Perimeter", false);
+	Dialog.addCheckbox("Bounding Rectangle", false);
+	Dialog.addCheckbox("Fit Ellipse", false);
+	Dialog.addCheckbox("Shape Descriptors", true);
+	Dialog.addCheckbox("Feret's Diameter", false);
+	Dialog.addCheckbox("Integrated Density", false);
+	Dialog.addCheckbox("Median", false);
+	Dialog.addCheckbox("Skewness", false);
+	Dialog.addCheckbox("Kurtosis", false);
+	Dialog.addCheckbox("Area Fraction", true);
+	Dialog.addCheckbox("Stack Position", false);
+	Dialog.addCheckbox("Limit to Threshold", false);
+	Dialog.addCheckbox("Display Label", false);
+	Dialog.addCheckbox("Invert Y Coordinates", false);
+	Dialog.addCheckbox("Scientific Notation", false);
+	Dialog.addCheckbox("Add to Overlay", false);
+	Dialog.addCheckbox("NaN Empty Cells", false);
+Dialog.show();
+
+// Get the values from the dialog
+area = Dialog.getCheckbox();
+meanGrayValue = Dialog.getCheckbox();
+standardDeviation = Dialog.getCheckbox();
+modalValue = Dialog.getCheckbox();
+minMaxGray = Dialog.getCheckbox();
+centroid = Dialog.getCheckbox();
+centerOfMass = Dialog.getCheckbox();
+perimeter = Dialog.getCheckbox();
+boundingRectangle = Dialog.getCheckbox();
+fitEllipse = Dialog.getCheckbox();
+shapeDescriptors = Dialog.getCheckbox();
+feretsDiameter = Dialog.getCheckbox();
+intDensity = Dialog.getCheckbox();
+median = Dialog.getCheckbox();
+skewness = Dialog.getCheckbox();
+kurtosis = Dialog.getCheckbox();
+areaFraction = Dialog.getCheckbox();
+stackPosition = Dialog.getCheckbox();
+limitToThreshold = Dialog.getCheckbox();
+displayLabel = Dialog.getCheckbox();
+invertY = Dialog.getCheckbox();
+scientificNotation = Dialog.getCheckbox();
+addToOverlay = Dialog.getCheckbox();
+nanEmptyCells = Dialog.getCheckbox();
+
+// Construct the measurement string
+measurementString = "";
+if (area) measurementString += "area ";
+if (meanGrayValue) measurementString += "mean ";
+if (standardDeviation) measurementString += "standard ";
+if (modalValue) measurementString += "modal ";
+if (minMaxGray) measurementString += "min ";
+if (centroid) measurementString += "centroid ";
+if (centerOfMass) measurementString += "center ";
+if (perimeter) measurementString += "perimeter ";
+if (boundingRectangle) measurementString += "bounding ";
+if (fitEllipse) measurementString += "fit ";
+if (shapeDescriptors) measurementString += "shape ";
+if (feretsDiameter) measurementString += "feret's ";
+if (intDensity) measurementString += "integrated ";
+if (median) measurementString += "median ";
+if (skewness) measurementString += "skewness ";
+if (kurtosis) measurementString += "kurtosis ";
+if (areaFraction) measurementString += "area_fraction ";
+if (stackPosition) measurementString += "stack ";
+if (limitToThreshold) measurementString += "limit ";
+if (displayLabel) measurementString += "display ";
+if (invertY) measurementString += "invert ";
+if (scientificNotation) measurementString += "scientific ";
+if (addToOverlay) measurementString += "add ";
+if (nanEmptyCells) measurementString += "nan ";
+
+// Set the measurements
+run("Set Measurements...", measurementString.trim() + " redirect=None decimal=3");
