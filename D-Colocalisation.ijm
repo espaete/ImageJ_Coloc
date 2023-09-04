@@ -584,7 +584,6 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 			
 			//Check if user is satisfied with the quantification
 			quantifyCurrentImage = getBoolean("Repeat quantification or continue with next one?", "Repeat", "Continue");
-			reuseMask = getBoolean("Reuse the previously created particle mask?", "Yes", "No");
 			
 			//Repeats quantifcation
 			if (quantifyCurrentImage) {
@@ -594,9 +593,7 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 				close(staining  + "_noBG-Double");
 				close("Image");
 				close("Output");
-				if (!reuseMask){
-					close("Mask-" + staining);
-				}
+				close("Mask-" + staining);
 				continue;
 			} else {
 				break
@@ -759,33 +756,41 @@ while (doColoc){
 	run("Clear Outside");
 	
 	//Create and remove selection to copy to stainingB_raw
+	run("Select None");
 	run("Create Selection");
 	run("Select None");
+	
 	selectWindow(stainingB + "_raw");
 	close(stainingB + "-ParticlesOG");
 	run("Duplicate...", "title=" + stainingB + "-ParticlesOG");
 	
-	//Restore selection of
+	//Restore selection of stainingA
 	run("Restore Selection");
+	
+	// Remove of stainingB that does not colocalize with stainingA
 	run("Clear Outside");
 	run("Select None");
+	
+	// Selects the Log window for the user to follow the quantification
 	selectWindow("Log");
-
+	
 	setBatchMode(true);
 	selectWindow(stainingB + "-ParticlesOG");
 	close(stainingB + "-Particles");
 	run("Duplicate...", "title=" + stainingB + "-Particles");
 	
+	// Resets ROI manager
 	if(roiManager("count") > 0){
 		roiManager("deselect");
 		roiManager("delete");
 	}
+	
+	// Opens ROI manager of stainingA particles
 	roiManager("open", outputROI + subfolder + "_" + stainingA + "-Particles_" + fileNoExtension + ".zip");
 	roiManager("show all");
 
-	setBatchMode("hide");
 	n = roiManager("count");
-	run("Set Measurements...", "area mean redirect=None decimal=3");
+	run("Set Measurements...", "area mean shape area_fraction redirect=None decimal=3");
 	run("Clear Results");
 	if (colocType == "whole"){
 		roiManager("combine");
@@ -793,35 +798,55 @@ while (doColoc){
 		run("Select None");
 		rename(stainingA + "-X-" + stainingB + " " + i+1);
 		setThreshold(1,Math.pow(2,bitDepth()));
-		run("Analyze Particles...", "dispaly clear summarize");
+		run("Analyze Particles...", "display clear summarize");
 	} else if(colocType == "partial"){
 		print(0 + "/" + n);
 		for (i = 0; i < n; i++) {
 			print("\\Update:" + i+1 + "/" + n);
 		    roiManager("select", i);
+		    
 		    roiManager("rename", "Cell " + i+1);
 			run("Enlarge...", "enlarge=" + enlargeA);
 			roiManager("update");
 			
-			setThreshold(0,Math.pow(2,bitDepth()));
+			// Measures the size of stainingA
+			setThreshold(0,Math.pow(2,bitDepth()));	
 			run("Measure");
+			
+			// Measures the size and paricle number of stainingB colocalizing with stainingA
 			setThreshold(1,Math.pow(2,bitDepth()));
 		    rename(stainingA + "-X-" + stainingB + " " + i+1);
 		    run("Analyze Particles...", "size=" + minSize + "-" + maxSize + " summarize");
 			}
 		}
 	run("Select None");	
+	roiManager("save", outputROI + subfolder + "_" + stainingA + "-Particles_" + fileNoExtension + ".zip");
 	
-	setBatchMode("show");
+	setBatchMode(false);
 	close("Particles");
 	selectWindow("Summary");
-	saveAs("Results", outputCSV + "Summary_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
-	Table.rename("Summary_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv", "Summary_Coloc");
+	saveAs("Results", outputCSV + "Fluorescence-Particles_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+	Table.rename("Fluorescence-Particles_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv", stainingA + "_X_" + stainingB + "Summary_Coloc");
 	Table.reset("Summary");
 	selectWindow("Results");
-	saveAs("Results", outputCSV + "Results_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
-	setBatchMode(false);
+	saveAs("Results", outputCSV + "Fluorescence-WholeCell" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
 	
+	subfolder = "Cortex";
+	stainingA = "NeuN";
+	stainingB = "LDHA";
+	filename = "0806_Left_LDHA-555_NeuN-633_10x-Overview.tiff";
+	fileNoExtension = "0806_Left_LDHA-555_NeuN-633_10x-Overview";
+	//Create new directories
+	outputDir = "/Volumes/Erik-MPI/LDHA+LDHB/Adult/NeuN/LDHA/Quantification-August2023" + File.separator + fileNoExtension;
+	newDir = newArray("ROI", "csv", "masks", "Logs");
+	
+	//Output variables, to reduce line length
+	outputROI = outputDir + File.separator + subfolder + File.separator + newDir[0] + File.separator;
+	outputCSV = outputDir + File.separator + subfolder + File.separator + newDir[1] + File.separator;
+	outputMASK = outputDir + File.separator + subfolder + File.separator + newDir[2] + File.separator;
+	outputLogs = outputDir + File.separator + subfolder + File.separator + newDir[3] + File.separator;
+
+
 	//Create compound image
 	mergingString = "c1=" + stainingA  + "_raw c2=" + stainingB  + "_raw c3=Outlines-" + stainingA + " c4=Outlines-" + stainingB + " c5=" + stainingB + "-ParticlesOutlines";
 
@@ -857,6 +882,7 @@ while (doColoc){
 	run("Yellow");
 	Stack.setDisplayMode("composite")
 	colocName[colocNr] = "Analyzed-" + stainingA + "+" + stainingB + "_" + filename;
+	Stack.setActiveChannels("110010");
 	
 	//Check Quantification
 	waitForUser("Check Quantification");
