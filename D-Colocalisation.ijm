@@ -550,7 +550,7 @@ while(quantifyNextImage){ // Repeats until user decides all quantifications are 
 			recursiveThresholding(staining);
 			
 			// Check if user is satisfied with the quantification
-			quantifyCurrentImage = getBoolean("Check Quantification", "Repeat", "Next one");
+			quantifyCurrentImage = getBoolean("Check Quantification", "Repeat", "Continue");
 			
 			// Repeats quantifcation
 			if (quantifyCurrentImage) {
@@ -612,9 +612,8 @@ while(quantifyNextImage){ // Repeats until user decides all quantifications are 
 	
 	// Save Results
 	selectWindow("Summary");
-	saveAs("Results", outputCSV + "Summary_" + subfolder + staining + "_ParticleNumber_" + fileNoExtension);
-	close("Summary_" + staining);
-	Table.rename("Summary_" + subfolder + staining + "_ParticleNumber_" + fileNoExtension, "Summary_" + staining);
+	close("Summary_" + subfolder + "_" + staining + "_ParticleNumber_" + fileNoExtension + ".csv");
+	saveAs("Results", outputCSV + "Summary_" + subfolder + "_" + staining + "_ParticleNumber_" + fileNoExtension + ".csv");
 	Table.reset("Summary");
 	quantifyNextImage = getBoolean("Another staining?");
 }
@@ -689,7 +688,7 @@ while (doColoc){
 	run("Select None");
 	selectWindow("Mask-" + stainingB);
 	close("Coloc-Particles-Mask");
-	run("Duplicate...", "title=Mask-" + stainingA + "+" + stainingB + "_Coloc-Particles");
+	run("Duplicate...", "title=IntermediateMask");
 	
 	// Enlarge Mask of staining B according to user input
 	for (i = 0; i < enlargeB; i++) {
@@ -714,9 +713,16 @@ while (doColoc){
 	run("Enlarge...", "enlarge=" + enlargeA);
 	
 	run("Clear Outside");
+	run("Select None");
+	waitForUser("Wait");
+	run("Analyze Particles...", "size=" + minSize + "-" + maxSize + " show=Masks");
+	
+	close("Mask-" + stainingA + "+" + stainingB + "_Coloc-Particles");
+	rename("Mask-" + stainingA + "+" + stainingB + "_Coloc-Particles");
+	close("IntermediateMask");
 	
 	//Create and remove selection to copy to stainingB_raw
-	run("Select None");
+	run("Invert");
 	run("Create Selection");
 	run("Select None");
 	
@@ -754,12 +760,10 @@ while (doColoc){
 	runMacro("ImageJ_Coloc/SetMeasurements.ijm")
 	run("Clear Results");
 	if (colocType == "batch"){
-		roiManager("combine");
-		run("Clear Outside");
-		run("Select None");
+		close(stainingA + "-X-" + stainingB);
 		rename(stainingA + "-X-" + stainingB);
 		setThreshold(1,Math.pow(2,bitDepth()));
-		run("Analyze Particles...", "size=" + minSize + "-" + maxSize + " display clear summarize");
+		roiManager("measure");
 	} else if(colocType == "single"){
 		print(0 + "/" + n);
 		for (i = 0; i < n; i++) {
@@ -768,33 +772,37 @@ while (doColoc){
 		    
 		    roiManager("rename", "Cell " + i+1);
 			run("Enlarge...", "enlarge=" + enlargeA);
+			
 			roiManager("update");
 			
 			// Measures the size of stainingA
 			setThreshold(0,Math.pow(2,bitDepth()));	
 			run("Measure");
 			
-			// Measures the size and paricle number of stainingB colocalizing with stainingA
+			// Measures the size and particle number of stainingB colocalizing with stainingA
 			setThreshold(1,Math.pow(2,bitDepth()));
 		    rename(stainingA + "-X-" + stainingB + " " + i+1);
 		    run("Analyze Particles...", "size=" + minSize + "-" + maxSize + " summarize");
-			}
 		}
+		close(stainingA + "-X-" + stainingB + " " + i+1);
+	}
 	run("Select None");	
 	roiManager("save", outputROI + subfolder + "_" + stainingA + "-Particles_" + fileNoExtension + ".zip");
 	
 	setBatchMode(false);
 	close("Particles");
-	selectWindow("Summary");
-	saveAs("Results", outputCSV + "Fluorescence-Particles_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
-	close(stainingA + "_X_" + stainingB + "Summary_Coloc");
-	Table.rename("Fluorescence-Particles_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv", stainingA + "_X_" + stainingB + "Summary_Coloc");
-	Table.reset("Summary");
+
 	selectWindow("Results");
 	if (colocType == "batch"){
-		saveAs("Results", outputCSV + "Fluorescence-Cell_colocOnly_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+		close("Fluorescence-Batch_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+		saveAs("Results", outputCSV + "Fluorescence-Batch_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
 	}else if(colocType == "single"){
-		saveAs("Results", outputCSV + "Fluorescence-Cell_wholeCell_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+		close("Fluorescence-Single_wholeCell_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+		saveAs("Results", outputCSV + "Fluorescence-Single_wholeCell_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+		selectWindow("Summary");
+		saveAs("Results", outputCSV + "Fluorescence-Single_Particles_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+		close("Fluorescence-Single_Particles_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+		Table.reset("Summary");
 	}
 
 
@@ -821,6 +829,7 @@ while (doColoc){
 	run("8-bit");
 	run("Outline");
 	run("16-bit");
+	run("Invert");
 
 	run("Merge Channels...", "c1=" + stainingA  + "_raw c2=" + stainingB  + "_raw c3=Outlines-" + stainingA + " c4=Outlines-" + stainingB + " c5=Outline-" + stainingA + "+" + stainingB + "_Coloc-Particles create keep");
 	close("Analyzed-" + stainingA + "+" + stainingB + "_" + filename);
@@ -861,14 +870,15 @@ if(File.exists(outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zi
 	roiManager("delete");
 }
 
-roiManager("open", outputROI + File.separator + subfolder + "-ROI_" + fileNoExtension + ".zip");
-roiManager("combine");
 run("Select None");
 setAutoThreshold("Huang dark");
 waitForUser("Adjust Threshold (Area)");
-run("Analyze Particles...", "show=Masks display clear summarize");
+run("Create Mask");
 saveAs("Tiff", outputMASK + "Mask-totalArea_" + subfolder + "_" + filename);
-
+run("Create Selection");
+selectWindow("Results");
+Table.reset("Results");
+run("Measure");
 selectWindow("Results");
 saveAs("Results", outputCSV + "totalArea_" + subfolder + "_" + fileNoExtension + ".csv");
 Table.rename("TotalArea");
