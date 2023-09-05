@@ -1,17 +1,17 @@
-//By Erik Späte @NAT MPG Göttingen, Department of Neurogenetics, UG Sandra Goebbels, 2022
-//Input original image + folder for single channels + folder for median filtered channels.
-//Analyzes single or multi channel images.
-//Segments image into particles using wide variaty of user set settings. 
-//Recursive thresholding enables segmentation of similarly sized particles of widely varying fluorescence.
-//Counts, measures and colocalizes particles automatically.
-//Marks colocalized particles in image for user verification.
-//Good luck!!!
+// By Erik Späte @NAT MPG Göttingen, Department of Neurogenetics, UG Sandra Goebbels, 2022
+// Input original image + folder for single channels + folder for median filtered channels.
+// Analyzes single or multi channel images.
+// Segments image into particles using wide variaty of user set settings. 
+// Recursive thresholding enables segmentation of similarly sized particles of widely varying fluorescence.
+// Counts, measures and colocalizes particles automatically.
+// Marks colocalized particles in image for user verification.
+// Good luck!!!
 
-//---FUNCTIONS---
-//Remove Background and artifacts
+// ---FUNCTIONS---
+// Remove Background and artifacts
 function removeBackground(staining, channelNr, rbSubtraction, subtractTimes){
-	//Removes background by subtracting the median filtered image
-	//Further removes background via imageJ function "Subtract Background".
+	// Removes background by subtracting the median filtered image
+	// Further removes background via imageJ function "Subtract Background".
 	if(staining != ""){
 		close(staining  + "_raw");
 		close("Background-" + staining);
@@ -30,7 +30,7 @@ function removeBackground(staining, channelNr, rbSubtraction, subtractTimes){
 			open(medianFilter + File.separator + "Filtered_" + staining + "-" + filename);
 			duplicateROI("Background-" + staining);
 			
-			//Subtract filtered image from original
+			// Subtract filtered image from original
 			for (i = 0; i < subtractTimes; i++) {
 				imageCalculator("Subtract ", staining + "_noBG", "Background-" + staining);
 			}
@@ -39,16 +39,15 @@ function removeBackground(staining, channelNr, rbSubtraction, subtractTimes){
 			waitForUser(medianFilter + File.separator + "Filtered_" + staining + "-" + filename + " does not exist!");
 		}
 
-		//Further reduce background
+		// Further reduce background
 		if (rbSubtraction){
 			run("Subtract Background...", "rolling=" + rbRadius);
 		}
-		//rename(staining + "_noBG");
 		if(roiManager("count") > 0){
 			roiManager("deselect");
 			roiManager("delete");
 		}
-		//Cut out outside areas and artifacts
+		// Cut out outside areas and artifacts
 		if(File.exists(outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zip")){
 			roiManager("Open", outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zip");
 			setForegroundColor(0, 0, 0);
@@ -73,7 +72,7 @@ function duplicateROI(newName){
 	roiManager("delete");
 }
 
-//Quantify single labeling
+// Quantify single labeling
 function recursiveThresholding(staining){	
 	setForegroundColor(Math.pow(2,bitDepth()), Math.pow(2,bitDepth()), Math.pow(2,bitDepth()));
 	getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec);
@@ -124,10 +123,10 @@ function recursiveThresholding(staining){
 		
 		selectWindow("Image");
 		setThreshold(lower, upper);
-		print("\\Update:Last Threshold: " + lower + " Oversized Particles: " + nResults());
+		print("\\Update:Last Threshold: " + lower + " Remaining Particles: " + nResults());
 		lower = lower + stepSize;
 		
-		//Get correct sized particles
+		// Get correct sized particles
 		run("Create Mask");
 		rename("ThresholdMask");
 		if (segment){
@@ -152,7 +151,7 @@ function recursiveThresholding(staining){
 		imageCalculator("AND", "Output", "Mask of ThresholdMask");
 		close("Mask of ThresholdMask");
 		
-		//Mark oversized particles
+		// Mark oversized particles
 		selectWindow("ThresholdMask");	
 		run("Analyze Particles...", "size=" + maxSize + "-Infinity show=Masks display clear");
 		
@@ -178,8 +177,8 @@ function recursiveThresholding(staining){
 			print("lower >= upper");
 			close("Close-to-stop");
 		}else {
-			//If there are still oversized particles,
-			//Continue loop with reduced threshold 
+			// If there are still oversized particles,
+			// Continue loop with reduced threshold 
 			close("ThresholdMask");
 			continue
 		}	
@@ -233,7 +232,7 @@ function abortLoop(){
 }
 
 function printBoolean(setting, bool){
-	//Prints the boolean settings as "Yes" or "No" instead of "1" or "0"
+	// Prints the boolean settings as "Yes" or "No" instead of "1" or "0"
 	if (bool){
 		print(setting + ": " + "Yes");
 	}else {
@@ -253,43 +252,8 @@ function backgroundPerCell(staining){
 	saveAs("Results", outputCSV + "Background-Particles" + staining  + "_" + fileNoExtension + ".csv");
 }
 
-
-function backgroundIntensity(staining){
-	//Quantifies background staining, ie. all areas that are previously not identified as part of the signal.
-	if (staining != ""){
-		selectWindow(staining  + "_raw");
-		run("Duplicate...", "title=" + staining + "_Background");
-		if(roiManager("count") > 0){
-			roiManager("deselect");
-			roiManager("delete");
-		}
-		if(File.exists(outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zip")){
-			roiManager("Open", outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zip");
-			setForegroundColor(0, 0, 0);
-			roiManager("fill");
-			roiManager("deselect");
-			roiManager("delete");
-		}
-		selectWindow("Mask-" + staining);
-		//run("Make Binary");
-		run("Create Selection");
-		run("Select None");
-		selectWindow(staining + "_Background");
-		run("Restore Selection");
-		run("Clear");
-		run("Select None");
-		setThreshold(1, Math.pow(2,bitDepth()));
-		waitForUser("Check Threshold: Background " + staining);
-		
-		run("Analyze Particles...", "show=Masks display clear summarize");
-		selectWindow("Results");
-		saveAs("Results", outputCSV + "Background-" + staining  + "_" + fileNoExtension + ".csv");
-		close(staining + "_Background");
-		
-	}
-}
-//START --- General Settings
-//Prompt User
+// START --- General Settings
+// Prompt User
 
 #@ String (label="Name (no blanks):") subfolder
 #@ File (label="Select composite file (.tif):", style = "file") inputFile
@@ -312,17 +276,17 @@ getPixelSize(unit, pixelWidth, pixelHeight);
 filename = getTitle();
 fileNoExtension = File.nameWithoutExtension;
 
-//Create new directories
+// Create new directories
 outputDir = outputDir + File.separator + fileNoExtension;
 newDir = newArray("ROI", "csv", "masks", "Logs");
 
-//Output variables, to reduce line length
+// Output variables, to reduce line length
 outputROI = outputDir + File.separator + subfolder + File.separator + newDir[0] + File.separator;
 outputCSV = outputDir + File.separator + subfolder + File.separator + newDir[1] + File.separator;
 outputMASK = outputDir + File.separator + subfolder + File.separator + newDir[2] + File.separator;
 outputLogs = outputDir + File.separator + subfolder + File.separator + newDir[3] + File.separator;
 
-//Loop through new directoreis
+// Loop through new directoreis
 
 for (i = 0; i < newDir.length; i++) {
 	if (File.isDirectory(outputDir) == 0) {
@@ -343,15 +307,15 @@ print(subfolder);
 getDateAndTime(year, month, dayOfWeek, dayOfMonth, hour, minute, second, msec);
 print("Time: " + hour + ":" + minute + ":" + second);
 
-//START --- Main Script
-//Open methods windows
+// START --- Main Script
+// Open methods windows
 run("Threshold...");
 run("Brightness/Contrast...");
 run("Channels Tool...");
 run("ROI Manager...");
 roiManager("reset");
 
-//Promt for ROI creation
+// Promt for ROI creation
 oldRoiPath = outputDir + File.separator + subfolder + File.separator + "ROI" + File.separator + subfolder + "-ROI_" + fileNoExtension + ".zip";
 if (File.exists(oldRoiPath)){
 	oldRoi = getBoolean("Reanalyze existing ROI?");
@@ -359,7 +323,7 @@ if (File.exists(oldRoiPath)){
 	oldRoi = false;
 }
 
-//Create new ROI
+// Create new ROI
 if (oldRoi) {
 	roiManager("open", outputDir + File.separator + subfolder + File.separator + "ROI" + File.separator + subfolder + "-ROI_" + fileNoExtension + ".zip");
 	roiManager("select", 0);
@@ -369,7 +333,7 @@ if (oldRoi) {
 	}
 }
 
-//Saves ROI
+// Saves ROI
 roiManager("add");
 roiManager("save selected", outputROI + subfolder + "-ROI_" + fileNoExtension + ".zip");
 roiManager("delete");
@@ -379,7 +343,7 @@ saveAs("Tiff", outputMASK + subfolder + "_" + filename);
 rename(subfolder);
 close(filename);
 
-//Create negative of ROI, which will be removed later, ie. the area not selected will be cut
+// Create negative of ROI, which will be removed later, ie. the area not selected will be cut
 selectWindow(subfolder);
 run("Restore Selection");
 run("Make Inverse");
@@ -388,7 +352,7 @@ if(selectionType() != -1){
 }
 
 
-//Manually select artifacts to remove
+// Manually select artifacts to remove
 cutAreasROI = outputDir + File.separator + subfolder + File.separator + "ROI" + File.separator + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zip";
 if (oldRoi && File.exists(cutAreasROI)) {
 	roiManager("reset");
@@ -398,7 +362,7 @@ roiManager("Show All");
 waitForUser("Select artifacts and regions that you don't want to analzye and add them to the ROI manager [by pressing t]");
 run("Select None");
 
-//Checks if any regions have been selected and saves them as "-CutArea-ROI"
+// Checks if any regions have been selected and saves them as "-CutArea-ROI"
 if(roiManager("count") > 0){
 	roiManager("save", outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zip")
 }else if(File.exists(outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zip")){
@@ -412,20 +376,17 @@ if(channels > 1) {
 	run("Split Channels");	
 }
 
-//Quantifies labeling area and particles.--
-//Uses defines minimal and maximal size of particles.
-//If selected, segments particles with "segmentParticles" function. Note: Can take up to several minutes.
-
-
+// Quantifies labeling area and particles.--
+// Uses defines minimal and maximal size of particles.
+// If selected, segments particles with "segmentParticles" function. Note: Can take up to several minutes.
 quantifyNextImage = true;
 stainingNr = 0;
-while(quantifyNextImage){ //Repeats until user all quantifications are done
+while(quantifyNextImage){ // Repeats until user decides all quantifications are done
 	stainingNr++;
 	n = 0;
-	quantifyCurrentImage = true;
-	while (quantifyCurrentImage) { //Repeats until user is satisfied with current quantification
+	while (true) { // Repeats until user is satisfied with current quantification
 		n++;
-		//General quantification settings
+		// General quantification settings
 		Dialog.create("Threhsolding Settings");
 			Dialog.addString("Staining:", "");
 			Dialog.addString("Channel:", "1");
@@ -447,18 +408,18 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 	   	circularityLow = Dialog.getString();
 	   	circularityHigh = Dialog.getString();
 	   	
-	   	//More settings
+	   	// More settings
 		subtractTimes = getString("Subtract (filtered) background image  x times:", "1");
 		rbSubtraction = getBoolean("Rolling ball BG subtraction?");
 		removeBackground(staining, channelID, rbSubtraction, subtractTimes);
 		
-		//Creates a duplicate of the image from which the background has been removed
+		// Creates a duplicate of the image from which the background has been removed
 		selectWindow(staining  + "_noBG");
 		run("Duplicate...", "title=" + staining  + "_noBG-Double");
 		run("Grays");
 						
 	   if(doThreshold) {
-	   		//Prompts user for minimum particle size
+	   		// Prompts user for minimum particle size
 		   	minSize = 0;
 		   	maxSize = "Infinity";
 		   	selectWindow("C" + channelID + "-Staining");
@@ -467,7 +428,7 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 				getStatistics(area);
 				minSize = area;
 				}
-			//Prompts user for maximum particle size
+			// Prompts user for maximum particle size
 			waitForUser("Select maximum particle size");
 			if (selectionType != -1){
 				getStatistics(area);
@@ -475,7 +436,7 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 			}
 			run("Select None");
 			
-			//Asks user to modify and/or verfiy choosen particle sizes
+			// Asks user to modify and/or verfiy choosen particle sizes
 			Dialog.create("Verify Particle Size");
 				Dialog.addString("Minimum Particle size:", minSize);
 				Dialog.addString("Maximum Particle size:", maxSize);
@@ -485,7 +446,7 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 	   	}	
 	   
 		
-		//Print Settings
+		// Print Settings
 		print(".");
 		print(".");
 		print(".");
@@ -510,19 +471,19 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 		   	print("Max particle size: " + maxSize);
 	   	}
 	   	
-		//Deselect and delete any ROI, if they exist
+		// Deselect and delete any ROI, if they exist
 		if(roiManager("count") > 0){
 			roiManager("deselect");
 			roiManager("delete");
 		}
 		
-		//Opens the "CutArea-ROI", if ti exists and deltes any area meant for deletion
+		// Opens the "CutArea-ROI", if ti exists and deltes any area meant for deletion
 		if(File.exists(outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zip")){
 			roiManager("Open", outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zip");
 			setForegroundColor(0, 0, 0);
 			roiManager("fill");
 			
-			//Deselect and delete any ROI, if they exist
+			// Deselect and delete any ROI, if they exist
 			if(roiManager("count") > 0){
 				roiManager("deselect");
 				roiManager("delete");
@@ -557,35 +518,41 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 	   			selectWindow(staining + "_noBG");
 	   		}
 	   		
-			//Rests and enhances contrast, promts user to set threshold
+			// Rests and enhances contrast, promts user to set threshold
 			resetMinAndMax();
 			run("8-bit");
 			run("Enhance Contrast", "saturated=0.35");
+			
+			manualMedianFilter = getBoolean("Apply a median filter?");
+			if (manualMedianFilter){
+				run("Median...");
+			}
+			
 			setAutoThreshold("Default dark");
 			waitForUser("Adjust Threshold (" + staining + ").");
 			getThreshold(lower, upper);
 			
-			//Removes a possible error due to misclicking
+			// Removes a possible error due to misclicking
 			while(lower == -1 && upper == -1){
 				waitForUser("Adjust Threshold (" + staining + ").");
 				getThreshold(lower, upper);
 			}
 			print("Threshold " + staining + ": " + lower + " - " + upper);
 			
-			//Restarts the thresholding process if user accidentally selected 'Apply'
+			// Restarts the thresholding process if user accidentally selected 'Apply'
 			if(is("binary")){
 				waitForUser("Please only adjust the threshold, don't press 'Apply'!");
 				continue
 			}
 			
-			//Function that applies the previously created settings
-			//Reduces the thresholding step by step until it quantified all possible particles
+			// Function that applies the previously created settings
+			// Reduces the thresholding step by step until it quantified all possible particles
 			recursiveThresholding(staining);
 			
-			//Check if user is satisfied with the quantification
-			quantifyCurrentImage = getBoolean("Repeat quantification or continue with next one?", "Repeat", "Continue");
+			// Check if user is satisfied with the quantification
+			quantifyCurrentImage = getBoolean("Check Quantification", "Repeat", "Next one");
 			
-			//Repeats quantifcation
+			// Repeats quantifcation
 			if (quantifyCurrentImage) {
 				close("Composite-" + staining);
 				close("Raw-Mask-" + staining);
@@ -607,20 +574,20 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 	   	}
    	}
    	
-	//Ends quantification and continues with the next one
-	//Save masks
+	// Ends quantification and continues with the next one
+	// Save masks
 	run("8-bit");
 	saveAs("Tiff", outputMASK + "Mask-" + staining  + "_" + filename);
 	saveAs("Results", outputCSV + staining  + "_" + fileNoExtension + ".csv");
 	rename("Mask-" + staining);
 	run("Select None");
 	
-	//Create Outlines
+	// Create Outlines
 	run("Analyze Particles...", "size=0-Infinity show=[Bare Outlines]");
 	rename("Outlines-" + staining);
 	run("16-bit");
 	
-	//Applies the previously created masks to measure the fluorescence
+	// Applies the previously created masks to measure the fluorescence
 	selectWindow(staining + "_raw");
 	run("Duplicate...", "title=" + staining);
 	run("Select None");
@@ -635,40 +602,41 @@ while(quantifyNextImage){ //Repeats until user all quantifications are done
 	run("Analyze Particles...", "display clear summarize");
 	selectWindow("Mask-" + staining);	
 	
-	//Create string of analyzed stainings (eg. "staining1 + staining2 + staining3""
-	//Used later to name the output files
+	// Create string of analyzed stainings (eg. "staining1 + staining2 + staining3""
+	// Used later to name the output files
 	if (stainingNr == 1){
 		stainingsStr = staining;
 	}else {
 		stainingsStr = stainingsStr + "+" + staining;
 	}
 	
-	//Save Results
+	// Save Results
 	selectWindow("Summary");
 	saveAs("Results", outputCSV + "Summary_" + subfolder + staining + "_ParticleNumber_" + fileNoExtension);
-	Table.rename("Summary_" + subfolder + staining + "_ParticleNumber_" + fileNoExtension, "Summary_ParticleNumber");
+	close("Summary_" + staining);
+	Table.rename("Summary_" + subfolder + staining + "_ParticleNumber_" + fileNoExtension, "Summary_" + staining);
 	Table.reset("Summary");
 	quantifyNextImage = getBoolean("Another staining?");
 }
 
 allStainings = split(stainingsStr,"+");
 
-//Check if user wants to do colocalisations
+// Check if user wants to do colocalisations
 colocStainings = newArray(0);
 doColoc = getBoolean("Do coloc quantification?");
 colocNr = 0;
 colocName = newArray(0);
 
-//Loops until user has done all colocalisations
+// Loops until user has done all colocalisations
 while (doColoc){
-	//Loops through function 'colocSettings' until it returns true
+	// Loops through function 'colocSettings' until it returns true
 	while (true){
 		Dialog.create("Coloc Settings");
 			Dialog.addChoice("Staining A", allStainings);
 			Dialog.addChoice("Staining B", allStainings);
-			Dialog.addChoice("Coloc-Type", newArray("Partial", "Whole"));
-			Dialog.addMessage("Whole: Overlapps A with B and quantifes the fluorescence per particle (fast)");
-			Dialog.addMessage("Partial: Differentiate between partial and whole overlapp based on particle size (slow)");
+			Dialog.addChoice("Coloc-Type", newArray("Single", "Batch"));
+			Dialog.addMessage("Batch: Quantifies colocallizing particles for all cells combined (fast)");
+			Dialog.addMessage("Single: Quantifies colocalizing particles for each cell individually (slow)");
 			
 			Dialog.addCheckbox("Fill Holes", false);
 			Dialog.addCheckbox("Segment", false);
@@ -684,23 +652,15 @@ while (doColoc){
 		colocType = Dialog.getChoice();	
 		
 		fillHoles = Dialog.getCheckbox();
-			segment = Dialog.getCheckbox();
-			isClose = Dialog.getCheckbox();
+		segment = Dialog.getCheckbox();
+		isClose = Dialog.getCheckbox();
 		
 		enlargeA = Dialog.getString();
 		enlargeB = Dialog.getString();
-		
-		//Set boundaries for partial overlapp
-		if (colocType == "partial"){
-			Dialog.create("Partial Overlapp");
-				Dialog.addString("Minumum coloc size", "0");
-				Dialog.addString("Maximum coloc size", "Infinity");
-			Dialog.show();
-			minSize = Dialog.getString();
-			maxSize = Dialog.getString();
-		}
+		minSize = Dialog.getString();
+		maxSize = Dialog.getString();
 	
-		//Check for error
+		// Check for error
 		if(stainingA == stainingB){
 			waitForUser("Please select two different stainings to coloclize.");
 			continue
@@ -720,35 +680,35 @@ while (doColoc){
 			print("Max particle size: " + maxSize);
 			break
 		}
-
 	}
 	
-	//Quantify Particles
+	// Quantify Particles
 	selectWindow("Mask-" + stainingA);
+	run("8-bit");
 	run("Create Selection");
 	run("Select None");
 	selectWindow("Mask-" + stainingB);
-	close(stainingB + "-ParticlesOutlines");
-	run("Duplicate...", "title=" + stainingB + "-ParticlesOutlines");
+	close("Coloc-Particles-Mask");
+	run("Duplicate...", "title=Mask-" + stainingA + "+" + stainingB + "_Coloc-Particles");
 	
-	//Enlarge Mask of staining B according to user input
+	// Enlarge Mask of staining B according to user input
 	for (i = 0; i < enlargeB; i++) {
 		run("Dilate");
 	}	
-	//Segment
+	// Segment
 	if (segment){
 		run("Watershed");
 	}
-	//Close
+	// Close
 	if (isClose) {
 		run("Close-");
 	}
-	//Fill Holes
+	// Fill Holes
 	if (fillHoles) {
 		run("Fill Holes");
 	}
 	
-	//Enlarge selection of staining A according to user input
+	// Enlarge selection of staining A according to user input
 	run("Restore Selection");
 	getVoxelSize(width, height, depth, unit);
 	run("Enlarge...", "enlarge=" + enlargeA);
@@ -764,7 +724,7 @@ while (doColoc){
 	close(stainingB + "-ParticlesOG");
 	run("Duplicate...", "title=" + stainingB + "-ParticlesOG");
 	
-	//Restore selection of stainingA
+	// Restore selection of stainingA
 	run("Restore Selection");
 	
 	// Remove of stainingB that does not colocalize with stainingA
@@ -790,16 +750,17 @@ while (doColoc){
 	roiManager("show all");
 
 	n = roiManager("count");
-	run("Set Measurements...", "area mean shape area_fraction redirect=None decimal=3");
+	//run("Set Measurements...", "area mean shape area_fraction redirect=None decimal=3");
+	runMacro("ImageJ_Coloc/SetMeasurements.ijm")
 	run("Clear Results");
-	if (colocType == "whole"){
+	if (colocType == "batch"){
 		roiManager("combine");
 		run("Clear Outside");
 		run("Select None");
-		rename(stainingA + "-X-" + stainingB + " " + i+1);
+		rename(stainingA + "-X-" + stainingB);
 		setThreshold(1,Math.pow(2,bitDepth()));
-		run("Analyze Particles...", "display clear summarize");
-	} else if(colocType == "partial"){
+		run("Analyze Particles...", "size=" + minSize + "-" + maxSize + " display clear summarize");
+	} else if(colocType == "single"){
 		print(0 + "/" + n);
 		for (i = 0; i < n; i++) {
 			print("\\Update:" + i+1 + "/" + n);
@@ -826,30 +787,18 @@ while (doColoc){
 	close("Particles");
 	selectWindow("Summary");
 	saveAs("Results", outputCSV + "Fluorescence-Particles_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+	close(stainingA + "_X_" + stainingB + "Summary_Coloc");
 	Table.rename("Fluorescence-Particles_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv", stainingA + "_X_" + stainingB + "Summary_Coloc");
 	Table.reset("Summary");
 	selectWindow("Results");
-	saveAs("Results", outputCSV + "Fluorescence-WholeCell" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
-	
-	subfolder = "Cortex";
-	stainingA = "NeuN";
-	stainingB = "LDHA";
-	filename = "0806_Left_LDHA-555_NeuN-633_10x-Overview.tiff";
-	fileNoExtension = "0806_Left_LDHA-555_NeuN-633_10x-Overview";
-	//Create new directories
-	outputDir = "/Volumes/Erik-MPI/LDHA+LDHB/Adult/NeuN/LDHA/Quantification-August2023" + File.separator + fileNoExtension;
-	newDir = newArray("ROI", "csv", "masks", "Logs");
-	
-	//Output variables, to reduce line length
-	outputROI = outputDir + File.separator + subfolder + File.separator + newDir[0] + File.separator;
-	outputCSV = outputDir + File.separator + subfolder + File.separator + newDir[1] + File.separator;
-	outputMASK = outputDir + File.separator + subfolder + File.separator + newDir[2] + File.separator;
-	outputLogs = outputDir + File.separator + subfolder + File.separator + newDir[3] + File.separator;
+	if (colocType == "batch"){
+		saveAs("Results", outputCSV + "Fluorescence-Cell_colocOnly_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+	}else if(colocType == "single"){
+		saveAs("Results", outputCSV + "Fluorescence-Cell_wholeCell_" + subfolder + "_" + stainingA + "+" + stainingB + "-Coloc_" + fileNoExtension + ".csv");
+	}
 
 
-	//Create compound image
-	mergingString = "c1=" + stainingA  + "_raw c2=" + stainingB  + "_raw c3=Outlines-" + stainingA + " c4=Outlines-" + stainingB + " c5=" + stainingB + "-ParticlesOutlines";
-
+	// Create compound image
 	selectWindow("Mask-" + stainingA);
 	run("16-bit");
 	run("Select None");
@@ -865,13 +814,15 @@ while (doColoc){
 	run("Duplicate...", "title=Outlines-" + stainingB);
 	run("Outline");
 	run("16-bit");
-
-	selectWindow(stainingB + "-ParticlesOutlines");
+	
+	close("Outline-" + stainingA + "+" + stainingB + "_Coloc-Particles");
+	selectWindow("Mask-" + stainingA + "+" + stainingB + "_Coloc-Particles");
+	run("Duplicate...", "title=Outline-" + stainingA + "+" + stainingB + "_Coloc-Particles");
 	run("8-bit");
 	run("Outline");
 	run("16-bit");
 
-	run("Merge Channels...", "c1=" + stainingA  + "_raw c2=" + stainingB  + "_raw c3=Outlines-" + stainingA + " c4=Outlines-" + stainingB + " c5=" + stainingB + "-ParticlesOutlines c6=Mask-" + stainingA + " create keep");
+	run("Merge Channels...", "c1=" + stainingA  + "_raw c2=" + stainingB  + "_raw c3=Outlines-" + stainingA + " c4=Outlines-" + stainingB + " c5=Outline-" + stainingA + "+" + stainingB + "_Coloc-Particles create keep");
 	close("Analyzed-" + stainingA + "+" + stainingB + "_" + filename);
 	saveAs("Tiff", outputMASK + "Analyzed-" + stainingA + "+" + stainingB + "_" + filename);
 	Stack.setDisplayMode("color");
@@ -882,24 +833,18 @@ while (doColoc){
 	run("Yellow");
 	Stack.setDisplayMode("composite")
 	colocName[colocNr] = "Analyzed-" + stainingA + "+" + stainingB + "_" + filename;
-	Stack.setActiveChannels("110010");
+	Stack.setActiveChannels("11001");
 	
-	//Check Quantification
+	// Check Quantification
 	waitForUser("Check Quantification");
 	doColoc = getBoolean("Do another coloc?");
 	colocNr++;
 }
 
-//Background quantification
-quantifyBG = getBoolean("Quantify Background?");
-if(quantifyBG) {
-	Table.reset("Summary");
-	for (i = 0; i < allStainings.length; i++) {
-		backgroundIntensity(allStainings[i]);
-	}
-}
+selectWindow("Mask-" + stainingA + "+" + stainingB + "_Coloc-Particles");
+saveAs("Tiff", outputMASK + "Mask-" + stainingA + "+" + stainingB + "_Coloc-Particles" + subfolder + "_" + filename);
 
-//Quantify total area
+// Quantify total area
 selectWindow(subfolder);
 run("Select None");
 run("Duplicate...", "title=Area duplicate channels=1");
@@ -916,6 +861,8 @@ if(File.exists(outputROI + subfolder + "-CutAreas-ROI_" + fileNoExtension + ".zi
 	roiManager("delete");
 }
 
+roiManager("open", outputROI + File.separator + subfolder + "-ROI_" + fileNoExtension + ".zip");
+roiManager("combine");
 run("Select None");
 setAutoThreshold("Huang dark");
 waitForUser("Adjust Threshold (Area)");
@@ -926,19 +873,9 @@ selectWindow("Results");
 saveAs("Results", outputCSV + "totalArea_" + subfolder + "_" + fileNoExtension + ".csv");
 Table.rename("TotalArea");
 
-//Save final results
-selectWindow("Summary");
-saveAs("Results", outputCSV + "Summary_Background_" + subfolder + "_" + fileNoExtension + ".csv");
-Table.rename("Summary_Background_" + subfolder + "_" + fileNoExtension + ".csv", "Summary_Background");
+// Save final results
 selectWindow("Log");
 print("Quantification succesfull! Check results for accuracy.");
 saveAs("Text", outputLogs + "Log_" + subfolder + "_" + fileNoExtension + ".txt");
 
-//Selects the final sumary window
-//if(isOpen("Summary"){
-//	selectWindow("Summary");
-//	for (i = 0; i < colocNr; i++) {
-//		selectWindow(colocName[i]);
-//	}
-//}
 waitForUser("Quantification succesfull! Check results for accuracy.");
